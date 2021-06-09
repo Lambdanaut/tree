@@ -1,0 +1,9 @@
+# Python files
+*.pyc
+
+# Backup files
+backup
+
+# Misc
+*.idea
+*.swp
