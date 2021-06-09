@@ -1,10 +1,13 @@
 import face_recognition
 import os
+import sys
+
+sys.path.append('.')
 
 import tree.backend.constants as constants
 
-filepath1 = os.path.join(constants.test_img_dir, "yash1.jpg")
-filepath2 = os.path.join(constants.test_img_dir, "yash2.jpg")
+filepath1 = os.path.join("tree/backend/tests", constants.test_img_dir, "yash1.jpg")
+filepath2 = os.path.join("tree/backend/tests", constants.test_img_dir, "yash2.jpg")
 
 yash1_face = face_recognition.load_image_file(filepath1)
 yash2_face = face_recognition.load_image_file(filepath2)
