@@ -1,7 +1,7 @@
 TREE
 ====
 
-Tree(Project Name Pending) is an art installation.
+**Tree**(Project Name Pending) is an art installation.
 
 Directory Structure
 -------------------
