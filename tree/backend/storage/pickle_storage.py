@@ -22,3 +22,6 @@ class PickleStorage(storage.Storage):
             self.save([])
 
         return []
+
+
+pickle_storage = PickleStorage()

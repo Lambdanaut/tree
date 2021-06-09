@@ -1,4 +1,4 @@
-import tree.backend.storage.pickle_storage as pickle_storage
+from tree.backend.storage.pickle_storage import pickle_storage
 
 
 class Face(object):
@@ -16,7 +16,7 @@ class Faces(object):
         return (face.encoding for face in self.faces)
 
     def save(self):
-        return self.pickle_storage.save(self)
+        return pickle_storage.save(self)
 
     def add_face(self):
         pass
