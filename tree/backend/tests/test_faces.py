@@ -9,13 +9,7 @@ import tree.backend.faces as faces
 
 class TestFaces(TestCase):
     def setUp(self):
-        self.filepath = os.path.join(constants.backup_filepath, constants.pickle_storage_filename)
-
-        # Delete pre-existing backups between tests
-        try:
-            os.remove(self.filepath)
-        except FileNotFoundError:
-            pass
+        pass
 
     def test_create_face_from_image(self):
         test_image_filepath = os.path.join(constants.test_images_filepath, 'yash1.jpg')
@@ -34,4 +28,5 @@ class TestFaces(TestCase):
         self.assertTrue(results[0])
 
         # Ensure the id and filename are constructed correctly
-        self.assertEqual(face.filename_from_id(face._id), face.cropped_image_filename)
+        self.assertEqual(face.full_image_filename_from_id(face._id), face.full_image_filename)
+        self.assertEqual(face.cropped_image_filename_from_id(face._id), face.cropped_image_filename)

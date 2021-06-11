@@ -13,17 +13,43 @@ import tree.backend.constants as constants
 from tree.backend.storage.pickle_storage import pickle_storage
 
 
-def snap_face() -> "Face":
-    # cv2.namedWindow("preview")
+class FaceNotFoundException(Exception):
+    """Raised if we couldn't detect a face in the provided image"""
+    pass
+
+
+def cam_capture() -> (str, str):
     vidcap = cv2.VideoCapture(0)
     success, image = vidcap.read()
 
-    filename = str(uuid.uuid4()) + constants.fresh_photos_extension
+    _id = str(uuid.uuid4())
+    filename = _id + constants.fresh_photos_extension
     filepath = os.path.join(constants.fresh_photos_filepath, filename)
 
     cv2.imwrite(filepath, image)
 
-    return create_face_from_image(filepath)
+    return _id, filepath
+
+
+def snap_face(retries: int = 5) -> "Face":
+    face = None
+
+    for retry in range(retries):
+        _id, snapped_image_filepath = cam_capture()
+
+        try:
+            # Face found in snapped image. Continue and return the face
+            face = create_face_from_image(snapped_image_filepath, _id)
+            break
+        except FaceNotFoundException:
+            # Face couldn't be found. Cleanup the snapped image and try again
+            os.remove(snapped_image_filepath)
+            continue
+
+    if face is None:
+        raise FaceNotFoundException
+
+    return face
 
 
 def create_face_from_image(filepath: str, _id: Union[str, None] = None) -> "Face":
@@ -38,7 +64,12 @@ def create_face_from_image(filepath: str, _id: Union[str, None] = None) -> "Face
 
     # Find the location of the face(s) in the image
     face_locations = face_recognition.face_locations(image)
-    face_location = face_locations[0]
+
+    # Check if we could detect a face or not. If not, try again.
+    try:
+        face_location = face_locations[0]
+    except IndexError:
+        raise FaceNotFoundException
 
     # Re-format the found face location to be used for cropping in PIL
     top, right, bottom, left = face_location
@@ -51,7 +82,7 @@ def create_face_from_image(filepath: str, _id: Union[str, None] = None) -> "Face
     encoding = face_recognition.face_encodings(image)[0]
 
     # Save the cropped face
-    cropped_image_filename = Face.filename_from_id(_id)
+    cropped_image_filename = Face.cropped_image_filename_from_id(_id)
     cropped_image_filepath = os.path.join(constants.cropped_faces_filepath, cropped_image_filename)
     cropped_pil_image.save(cropped_image_filepath)
 
@@ -67,12 +98,21 @@ class Face(object):
         self.messages = []
 
     @property
+    def full_image_filename(self):
+        """Returns the filename of the full original image, based on the id"""
+        return Face.full_image_filename_from_id(self._id)
+
+    @property
     def cropped_image_filename(self):
-        """Returns the filename of the image, based on the id"""
-        return Face.filename_from_id(self._id)
+        """Returns the filename of the cropped face, based on the id"""
+        return Face.cropped_image_filename_from_id(self._id)
 
     @staticmethod
-    def filename_from_id(_id: str):
+    def full_image_filename_from_id(_id: str):
+        return _id + constants.fresh_photos_extension
+
+    @staticmethod
+    def cropped_image_filename_from_id(_id: str):
         return _id + constants.cropped_face_extension
 
     def add_message(self, message):
@@ -96,4 +136,4 @@ class Faces(object):
     def add_face(self):
         pass
 
-snap_face()
+# snap_face()
