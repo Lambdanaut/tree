@@ -48,9 +48,15 @@ class TestFaces(TestCase):
         for message in joshua_messages:
             joshua_face.add_message(message)
 
+        # Get the encodings for the two alternate faces
+        yash_face_2 = face_recognition.load_image_file(self.test_yash_image_filepath2)
+        joshua_face_2 = face_recognition.load_image_file(self.test_joshua_image_filepath2)
+        yash_encoding_2 = face_recognition.face_encodings(yash_face_2)[0]
+        joshua_encoding_2 = face_recognition.face_encodings(joshua_face_2)[0]
+
         # Search the set of faces for these new faces and try to get matches
-        yash_matched_face = f.get_face_from_image(self.test_yash_image_filepath2)
-        joshua_matched_face = f.get_face_from_image(self.test_joshua_image_filepath2)
+        yash_matched_face = f.get_face_from_encoding(yash_encoding_2)
+        joshua_matched_face = f.get_face_from_encoding(joshua_encoding_2)
 
         # Assert faces were matched and found
         self.assertTrue(isinstance(yash_matched_face, faces.Face))
@@ -63,3 +69,14 @@ class TestFaces(TestCase):
         # Assert the messages of the matched faces match what we'd expect
         self.assertEqual(yash_messages, yash_matched_face.messages)
         self.assertEqual(joshua_messages, joshua_matched_face.messages)
+
+        # Assert that consuming messages works as intended
+        self.assertEqual(yash_messages[1], yash_matched_face.consume_message())
+        self.assertEqual(len(yash_matched_face.messages), 1)
+        self.assertEqual(yash_messages[0], yash_matched_face.consume_message())
+        self.assertEqual(len(yash_matched_face.messages), 0)
+        self.assertEqual(joshua_messages[1], joshua_matched_face.consume_message())
+        self.assertEqual(len(joshua_matched_face.messages), 1)
+        self.assertEqual(joshua_messages[0], joshua_matched_face.consume_message())
+        self.assertEqual(len(joshua_matched_face.messages), 0)
+

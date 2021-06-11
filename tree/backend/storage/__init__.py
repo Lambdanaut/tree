@@ -3,7 +3,7 @@ import abc
 
 class Storage(abc.ABC):
     @abc.abstractmethod
-    def save(self):
+    def save(self, data):
         pass
 
     @abc.abstractmethod

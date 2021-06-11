@@ -9,6 +9,7 @@ fresh_photos_filepath = os.path.join(static_filepath, "fresh_photos")
 test_images_filepath = os.path.join(tests_filepath, "images")
 
 pickle_storage_filename = "backup"
+test_pickle_storage_filename = "unit_test_backup"
 
 cropped_face_extension = ".jpg"
 fresh_photos_extension = ".jpg"
