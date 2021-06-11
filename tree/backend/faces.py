@@ -1,14 +1,35 @@
 import os
+import sys
 import uuid
+from typing import Union
+
+sys.path.append('.')
 
 import face_recognition
 from PIL import Image, ImageDraw
+import cv2
 
 import tree.backend.constants as constants
 from tree.backend.storage.pickle_storage import pickle_storage
 
 
-def create_face_from_image(filepath: str) -> "Face":
+def snap_face() -> "Face":
+    # cv2.namedWindow("preview")
+    vidcap = cv2.VideoCapture(0)
+    success, image = vidcap.read()
+
+    filename = str(uuid.uuid4()) + constants.fresh_photos_extension
+    filepath = os.path.join(constants.fresh_photos_filepath, filename)
+
+    cv2.imwrite(filepath, image)
+
+    return create_face_from_image(filepath)
+
+
+def create_face_from_image(filepath: str, _id: Union[str, None] = None) -> "Face":
+    # Create an id for the new face
+    _id = _id or str(uuid.uuid4())
+
     # Load the image into facial recognition
     image = face_recognition.load_image_file(filepath)
 
@@ -25,16 +46,12 @@ def create_face_from_image(filepath: str) -> "Face":
 
     # Crop the face in PIL
     cropped_pil_image = pil_image.crop(pil_formatted_face_location)
-    cropped_pil_image.show()
 
     # Build an encoding for the face
     encoding = face_recognition.face_encodings(image)[0]
 
-    # Create an id for the new face
-    _id = str(uuid.uuid4())
-
     # Save the cropped face
-    cropped_image_filename = _id + constants.cropped_face_extension
+    cropped_image_filename = Face.filename_from_id(_id)
     cropped_image_filepath = os.path.join(constants.cropped_faces_filepath, cropped_image_filename)
     cropped_pil_image.save(cropped_image_filepath)
 
@@ -45,13 +62,18 @@ def create_face_from_image(filepath: str) -> "Face":
 class Face(object):
     def __init__(self, _id: str, encoding):
 
-        self._id = id
+        self._id: str = _id
         self.encoding = encoding
         self.messages = []
 
     @property
     def cropped_image_filename(self):
-        return self._id + constants.cropped_face_extension
+        """Returns the filename of the image, based on the id"""
+        return Face.filename_from_id(self._id)
+
+    @staticmethod
+    def filename_from_id(_id: str):
+        return _id + constants.cropped_face_extension
 
     def add_message(self, message):
         self.messages.append(message)
@@ -73,3 +95,5 @@ class Faces(object):
 
     def add_face(self):
         pass
+
+snap_face()

@@ -4,6 +4,7 @@
 # Backup files
 backup
 tree/backend/static/cropped_faces/*.jpg
+tree/backend/static/fresh_photos/*.jpg
 
 # Misc
 *.idea
