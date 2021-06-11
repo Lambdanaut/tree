@@ -10,3 +10,4 @@ tree/backend/static/fresh_photos/*.jpg
 # Misc
 *.idea
 *.swp
+*.DS_Store
