@@ -1,6 +1,9 @@
 import pickle
 import os
+import sys
 from typing import Union
+
+sys.path.append('.')
 
 import tree.backend.constants as constants
 import tree.backend.faces as faces
