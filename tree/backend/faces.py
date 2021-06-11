@@ -6,7 +6,7 @@ from typing import Union
 sys.path.append('.')
 
 import face_recognition
-from PIL import Image, ImageDraw
+from PIL import Image
 import cv2
 
 import tree.backend.constants as constants
@@ -16,6 +16,10 @@ from tree.backend.storage.pickle_storage import pickle_storage
 class FaceNotFoundException(Exception):
     """Raised if we couldn't detect a face in the provided image"""
     pass
+
+
+class NoMatchingFaceFoundException(Exception):
+    """Raised if we couldn't match the face to any face in a set of faces"""
 
 
 def cam_capture() -> (str, str):
@@ -59,9 +63,6 @@ def create_face_from_image(filepath: str, _id: Union[str, None] = None) -> "Face
     # Load the image into facial recognition
     image = face_recognition.load_image_file(filepath)
 
-    # Load the image into PIL for cropping
-    pil_image = Image.fromarray(image)
-
     # Find the location of the face(s) in the image
     face_locations = face_recognition.face_locations(image)
 
@@ -74,6 +75,9 @@ def create_face_from_image(filepath: str, _id: Union[str, None] = None) -> "Face
     # Re-format the found face location to be used for cropping in PIL
     top, right, bottom, left = face_location
     pil_formatted_face_location = (left, top, right, bottom)
+
+    # Load the image into PIL for cropping
+    pil_image = Image.fromarray(image)
 
     # Crop the face in PIL
     cropped_pil_image = pil_image.crop(pil_formatted_face_location)
@@ -130,10 +134,28 @@ class Faces(object):
     def face_encodings(self):
         return (face.encoding for face in self.faces)
 
+    def get_face_from_image(self, filepath: str):
+        # Load the image into facial recognition
+        image = face_recognition.load_image_file(filepath)
+        face_encoding = face_recognition.face_encodings(image)[0]
+
+        results = face_recognition.compare_faces(list(self.face_encodings), face_encoding)
+        for result, face in zip(results, self.faces):
+            if result:
+                return face
+
+        # No match found
+        raise NoMatchingFaceFoundException
+
     def save(self):
         return pickle_storage.save(self)
 
-    def add_face(self):
-        pass
+    def add_face_from_image(self, filepath: str, _id: Union[str, None] = None) -> "Face":
+        created_face = create_face_from_image(filepath, _id)
+        self.add_face(created_face)
+        return created_face
+
+    def add_face(self, face):
+        self.faces.append(face)
 
 # snap_face()
