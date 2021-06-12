@@ -11,7 +11,6 @@ Directory Structure
 * **/docs/** contains planning docs for code and construction
 
 
-
 Digital Architecture
 --------------------
 
