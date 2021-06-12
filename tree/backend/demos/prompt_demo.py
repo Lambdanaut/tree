@@ -1,5 +1,3 @@
-import time
-
 import tree.backend.faces as faces
 
 
@@ -41,4 +39,3 @@ def run(f: "faces.Faces"):
                 break
 
         print("\nThank you for talking to A Tree")
-        time.sleep(2)
