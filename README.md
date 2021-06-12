@@ -15,4 +15,4 @@ Directory Structure
 Digital Architecture
 --------------------
 
-![Graph depicting the digital architecture of the project. Primarily, a Backend connected to a Microcontroller. ]("docs/tree-digital-architecture.png")
+![Graph depicting the digital architecture of the project. Primarily, a Backend connected to a Microcontroller. ](docs/tree-digital-architecture.png)g
