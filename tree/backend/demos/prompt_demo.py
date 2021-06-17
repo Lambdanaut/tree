@@ -1,3 +1,8 @@
+import os
+
+import pyASCIIgenerator
+
+import tree.backend.constants as constants
 import tree.backend.faces as faces
 
 
@@ -36,7 +41,14 @@ def run(f: "faces.Faces"):
 
             if i == 'y':
                 for other_face in f:
-                    other_face.show_full_image()
+
+                    # Commented out code to show the cropped photo as a popup
+                    # other_face.show_full_image()
+
+                    # Show an ASCII image of the person's cropped photo
+                    pyASCIIgenerator.asciify(os.path.join(
+                        constants.cropped_faces_filepath,
+                        other_face.cropped_image_filename))
 
                     print("\nWould you like to message this person? Y/N")
                     i = input(" > ").lower()
