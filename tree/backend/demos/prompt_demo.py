@@ -3,9 +3,9 @@ import tree.backend.faces as faces
 
 def run(f: "faces.Faces"):
     print("Tree initialized")
-    print("Now detecting faces...")
 
     while True:
+        print("Now detecting faces...")
         try:
             face = f.snap_face()
         except faces.FaceNotFoundException:
