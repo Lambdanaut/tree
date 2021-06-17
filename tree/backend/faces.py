@@ -10,7 +10,7 @@ from PIL import Image
 import cv2
 
 import tree.backend.constants as constants
-from tree.backend.storage.pickle_storage import pickle_storage
+import tree.backend.storage.pickle_storage as pickle_storage
 
 
 class FaceNotFoundException(Exception):
@@ -50,13 +50,16 @@ def cam_capture() -> (str, str):
 def create_face_from_image(
         filepath: str,
         _id: Union[str, None] = None,
-        faces: Union["Faces", None] = None) -> "Face":
+        faces: Union["Faces", None] = None,
+        save_backup: bool = True
+    ) -> "Face":
     """
     Creates a Face object from an image filepath, optionally adding it to a collection of Faces
 
     :param filepath: filepath of the image to search for faces within
     :param _id: optional id to use for the new Face object
     :param faces: optional Faces object to add the newly created Face to
+    :param save_backup: Saves a backup to disk if `faces` is given and this is set to True
     :return: the newly created Face object
     """
 
@@ -88,7 +91,7 @@ def create_face_from_image(
             preexisting_face = faces.get_face_from_encoding(encoding)
         except NoMatchingFaceFoundException:
             # We don't have a record of this new face, so we should continue on to crop and record it
-            faces.add_face(face)
+            faces.add_face(face, save_backup=save_backup)
             pass
         else:
             # We've already seen this face before, so we don't want to record it
@@ -96,14 +99,17 @@ def create_face_from_image(
 
     # Crop the face in PIL
     top, right, bottom, left = face_location
-    crop_face(image, _id, (left, top, right, bottom))
+    crop_face(image, _id, (left, top, right, bottom), flip_horizontally=True)
 
     return face
 
 
-def crop_face(image, filename, box=None):
+def crop_face(image, filename, box, flip_horizontally=False):
     # Load the image into PIL for cropping
     pil_image = Image.fromarray(image)
+
+    if flip_horizontally:
+        pil_image = pil_image.transpose(Image.FLIP_LEFT_RIGHT)
 
     # Crop the face in PIL
     cropped_pil_image = pil_image.crop(box)
@@ -120,6 +126,8 @@ class Face(object):
         self._id: str = _id
         self.encoding = encoding
         self.messages = []
+        self._full_image = None  # Use self.full_image to get this
+        self._cropped_image = None  # Use self.cropped_image to get this
 
     @property
     def full_image_filename(self):
@@ -130,6 +138,24 @@ class Face(object):
     def cropped_image_filename(self):
         """Returns the filename of the cropped face, based on the id"""
         return Face.cropped_image_filename_from_id(self._id)
+
+    @property
+    def full_image(self):
+        if self._full_image:
+            return self._full_image
+
+        filepath = os.path.join(constants.fresh_photos_filepath, self.full_image_filename)
+        image = Image.open(filepath)
+        return image
+
+    @property
+    def cropped_image(self):
+        if self._cropped_image:
+            return self._cropped_image
+
+        filepath = os.path.join(constants.cropped_faces_filepath, self.cropped_image_filename)
+        image = Image.open(filepath)
+        return image
 
     @staticmethod
     def full_image_filename_from_id(_id: str):
@@ -145,10 +171,23 @@ class Face(object):
     def consume_message(self):
         return self.messages.pop()
 
+    def show_full_image(self):
+        self.full_image.show()
+
+    def show_cropped_image(self):
+        self.cropped_image.show()
+
 
 class Faces(object):
-    def __init__(self, faces=None):
+    def __init__(self, faces=None, storage=None):
         self.faces = faces or []
+        self.storage = storage or pickle_storage.pickle_storage
+
+    def __iter__(self):
+        return self.faces.__iter__()
+
+    def __next__(self):
+        return self.faces.__next__()
 
     @property
     def face_encodings(self):
@@ -171,15 +210,16 @@ class Faces(object):
         # No match found
         raise NoMatchingFaceFoundException
 
-    def add_face_from_image(self, filepath: str, _id: Union[str, None] = None) -> "Face":
+    def add_face_from_image(self, filepath: str, _id: Union[str, None] = None, save_backup: bool = True) -> "Face":
         """
         Friendly helper that wraps the create_face_from_image to also add the face to this faces object
 
         :param filepath: filepath to the image of the face to add
         :param _id: optional id string of the face to add
+        :param save_backup: save a backup to disk after adding the new face
         :return: The created Face
         """
-        created_face = create_face_from_image(filepath, _id, self)
+        created_face = create_face_from_image(filepath, _id, self, save_backup)
         return created_face
 
     def add_face(self, face, save_backup: bool = True):
@@ -218,10 +258,12 @@ class Faces(object):
 
         return face
 
-    def add_message(self, face: "Face", message: str):
+    def add_message(self, face: "Face", message: str, save_backup: bool = True):
         """Wrapper to also save when adding a message to a face"""
         face.add_message(message)
-        self.save()
+
+        if save_backup:
+            self.save()
 
     def save(self):
-        return pickle_storage.save(self)
+        return self.storage.save(self)

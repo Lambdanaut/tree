@@ -5,10 +5,15 @@ import face_recognition
 
 import tree.backend.constants as constants
 import tree.backend.faces as faces
+from tree.backend.storage.pickle_storage import PickleStorage
 
 
 class TestFaces(TestCase):
     def setUp(self):
+        self.p = PickleStorage(constants.test_pickle_storage_filename)
+
+        self.faces = faces.Faces(storage=self.p)
+
         self.test_yash_image_filepath1 = os.path.join(constants.test_images_filepath, 'yash1.jpg')
         self.test_yash_image_filepath2 = os.path.join(constants.test_images_filepath, 'yash2.jpg')
         self.test_joshua_image_filepath1 = os.path.join(constants.test_images_filepath, 'joshua1.jpg')
@@ -33,11 +38,9 @@ class TestFaces(TestCase):
         self.assertEqual(face.cropped_image_filename_from_id(face._id), face.cropped_image_filename)
 
     def test_get_face_from_image(self):
-        f = faces.Faces()
-
         # Create the face objects from the images and add them to the Faces object
-        yash_face = f.add_face_from_image(self.test_yash_image_filepath1)
-        joshua_face = f.add_face_from_image(self.test_joshua_image_filepath1)
+        yash_face = self.faces.add_face_from_image(self.test_yash_image_filepath1)
+        joshua_face = self.faces.add_face_from_image(self.test_joshua_image_filepath1)
 
         # Add some messages to the created faces
         yash_messages = ["I love you", "you stinky man you"]
@@ -55,8 +58,8 @@ class TestFaces(TestCase):
         joshua_encoding_2 = face_recognition.face_encodings(joshua_face_2)[0]
 
         # Search the set of faces for these new faces and try to get matches
-        yash_matched_face = f.get_face_from_encoding(yash_encoding_2)
-        joshua_matched_face = f.get_face_from_encoding(joshua_encoding_2)
+        yash_matched_face = self.faces.get_face_from_encoding(yash_encoding_2)
+        joshua_matched_face = self.faces.get_face_from_encoding(joshua_encoding_2)
 
         # Assert faces were matched and found
         self.assertTrue(isinstance(yash_matched_face, faces.Face))
