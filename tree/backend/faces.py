@@ -3,11 +3,11 @@ import sys
 import uuid
 from typing import Union
 
-sys.path.append('.')
-
 import face_recognition
 from PIL import Image
 import cv2
+
+sys.path.append('.')
 
 import tree.backend.constants as constants
 import tree.backend.storage.pickle_storage as pickle_storage
