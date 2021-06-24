@@ -22,7 +22,10 @@ def run(f: "faces.Faces"):
             face = exc.preexisting_face
         else:
             print("\n Welcome new face! We will remember you! ")
-            face.show_cropped_image()
+            # Show your face as ASCII
+            pyASCIIgenerator.asciify(os.path.join(
+                constants.cropped_faces_filepath,
+                face.cropped_image_filename))
 
         if face.messages:
             print(" Would you like to read your `{}` messages? Y/N".format(len(face.messages)))

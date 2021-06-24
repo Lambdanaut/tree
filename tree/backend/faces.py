@@ -108,11 +108,11 @@ def crop_face(image, filename, box, flip_horizontally=False):
     # Load the image into PIL for cropping
     pil_image = Image.fromarray(image)
 
-    if flip_horizontally:
-        pil_image = pil_image.transpose(Image.FLIP_LEFT_RIGHT)
-
     # Crop the face in PIL
     cropped_pil_image = pil_image.crop(box)
+
+    if flip_horizontally:
+        cropped_pil_image = cropped_pil_image.transpose(Image.FLIP_LEFT_RIGHT)
 
     # Save the cropped face
     cropped_image_filename = Face.cropped_image_filename_from_id(filename)
