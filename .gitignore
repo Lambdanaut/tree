@@ -6,6 +6,7 @@ backup
 unit_test_backup
 tree/backend/static/cropped_faces/*.jpg
 tree/backend/static/fresh_photos/*.jpg
+tree/backend/static/audio_recordings/*.wav
 
 # Misc
 *.idea
