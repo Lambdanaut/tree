@@ -4,6 +4,8 @@ opencv-python==4.5.2.54
 Pillow==7.0.0
 playsound==1.2.2
 pyASCIIgenerator==1.0.0
+PyAudio==0.2.11
 pydub==0.25.1
 scipy==1.7.0
 sounddevice==0.4.1
+wave==0.0.2

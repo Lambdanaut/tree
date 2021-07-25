@@ -1,16 +1,28 @@
+from array import array
 import abc
+from collections import deque
 import os
+from queue import Queue, Full
 import sys
-import tempfile
+import threading
 
+import pyaudio
 import playsound
 import pydub
 import sounddevice
-import scipy.io.wavfile
+import wave
 
 sys.path.append('.')
 
 import tree.backend.constants as constants
+
+
+CHUNK_SIZE = 1024
+MIN_VOLUME = 500
+# if the recording thread can't consume fast enough, the listener will start discarding
+BUF_MAX_SIZE = CHUNK_SIZE * 10
+
+p = pyaudio.PyAudio()
 
 
 class Audio(abc.ABC):
@@ -33,6 +45,7 @@ class Audio(abc.ABC):
 class WavAudio(Audio):
     sample_rate = 44100
     channels = 2
+    format = pyaudio.paInt16
 
     def __init__(
             self,
@@ -80,46 +93,71 @@ class WavAudio(Audio):
         # Documentation for sounddevice:
         # https://python-sounddevice.readthedocs.io/en/latest/usage.html
 
-        time_elapsed = 0
-        # ongoing_segment = pydub.AudioSegment.silent(
-        #     duration=self.max_duration*1000,
-        #     frame_rate=self.sample_rate
-        # )
-        ongoing_segment = None
-        while True:
-            # Start recording
-            recording = sounddevice.rec(int(self.silence_duration * self.sample_rate))
-
-            # Wait until recording is finished
-            sounddevice.wait()
-
-            # Write recording to temporary file to be read by pydub
-            with tempfile.TemporaryFile() as f:
-                scipy.io.wavfile.write(f, self.sample_rate, recording)
-
-                # Load audio segment into pydub for analysis
-                segment = pydub.AudioSegment.from_wav(f)
-
-                # Break if the last recording was silent
-                is_silent = self._is_silent(segment)
-                if is_silent:
+        def _record(stopped, q):
+            frames = []
+            while True:
+                if stopped.wait(timeout=0):
                     break
+                chunk = q.get()
+                vol = max(chunk)
+                print('█' * int(vol / 100))
 
-                if ongoing_segment:
-                    ongoing_segment = ongoing_segment.append(segment)
-                else:
-                    ongoing_segment = segment
+                frames.append(chunk)
 
-                print(len(ongoing_segment))
+                if vol < 5:
+                    # Save as WAV file
+                    filepath = self._filepath_from_filename(filename)
 
-            # Break if the recording is too long
-            time_elapsed += self.silence_duration
-            if time_elapsed >= self.max_duration:
-                break
+                    # open the file in 'write bytes' mode
+                    wf = wave.open(filepath, "wb")
+                    # set the channels
+                    wf.setnchannels(self.channels)
+                    # set the sample format
+                    wf.setsampwidth(p.get_sample_size(self.format))
+                    # set the sample rate
+                    wf.setframerate(self.sample_rate)
+                    # write the frames as bytes
+                    wf.writeframes(b"".join(frames))
+                    # close the file
+                    wf.close()
 
-        # Save as WAV file
-        filepath = self._filepath_from_filename(filename)
-        ongoing_segment.export(filepath, format="wav")
+                    sys.exit()
+
+        def _listen(stopped, q):
+            stream = pyaudio.PyAudio().open(
+                format=pyaudio.paInt16,
+                channels=self.channels,
+                rate=self.sample_rate,
+                input=True,
+                frames_per_buffer=1024,
+            )
+
+            while True:
+                if stopped.wait(timeout=0):
+                    break
+                try:
+                    q.put(array('h', stream.read(CHUNK_SIZE)))
+                except Full:
+                    pass  # discard
+
+        stopped = threading.Event()
+        q = Queue(maxsize=int(round(BUF_MAX_SIZE / CHUNK_SIZE)))
+
+        listen_t = threading.Thread(target=_listen, args=(stopped, q))
+        listen_t.start()
+        record_t = threading.Thread(target=_record, args=(stopped, q))
+        record_t.start()
+
+        try:
+            while True:
+                listen_t.join(0.1)
+                record_t.join(0.1)
+        except KeyboardInterrupt:
+            stopped.set()
+
+        listen_t.join()
+        record_t.join()
+
 
 
 wa = WavAudio()
