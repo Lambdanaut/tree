@@ -2,6 +2,7 @@ from array import array
 import abc
 import os
 from queue import Queue, Full
+import statistics
 import sys
 import threading
 
@@ -52,7 +53,8 @@ class WavAudio(Audio):
             max_duration: int = 12,
             silence_threshold: int = 90,  # Anything below this volume is considered silent
             silence_duration: float = 0.75,  # Number of seconds to look back on to count silence duration
-            filepath: str = None):
+            filepath: str = None,
+            debug: bool = False):
 
         """
         Usage:
@@ -74,6 +76,7 @@ class WavAudio(Audio):
         self.silence_threshold = silence_threshold
         self.silence_duration = silence_duration
         self.filepath = filepath or constants.audio_recordings_filepath
+        self.debug = debug
 
         # Initialize sample rate and channels for all recordings
         sounddevice.default.samplerate = self.sample_rate
@@ -93,44 +96,47 @@ class WavAudio(Audio):
         vol = max(chunk)
         print('█' * int(vol / 100))
 
-    def calibrate(self, play_demo_audio: bool = True):
+    def calibrate(self, show_demo_text: bool = True, play_demo_audio: bool = True):
         """
         Sets the silence_threshold after a calibration period of detected silence.
         """
         # Play calibration beginning audio
-        if play_demo_audio:
+        if show_demo_text:
             print("Calibration process started")
             print("===========================")
 
+        if play_demo_audio:
             calibration1_filepath = os.path.join(constants.static_filepath, 'calibration1.wav')
             playsound.playsound(calibration1_filepath)
 
+        if show_demo_text:
             print(" - Remain silent for 4 seconds")
 
         frame_volumes = []  # Initialize list to store frames
 
-        # Store data in chunks for 4 seconds
+        # Store data in chunks for 4.0 seconds
+        duration: float = 4.0
         stream = p.open(format=self.format,
                         channels=self.channels,
                         rate=self.sample_rate,
                         frames_per_buffer=self.chunk_size,
                         input=True)
-        for i in range(0, int(self.sample_rate / self.chunk_size * 4)):
+        for i in range(0, int(self.sample_rate / self.chunk_size * duration)):
             volume = max(stream.read(self.chunk_size))
             frame_volumes.append(volume)
 
-        avg = sum(frame_volumes) / len(frame_volumes)
-        calibrated_value = int(avg*1.5)  # A bit noisier than the average
+        calibrated_value = int(statistics.median(frame_volumes) * 1.5)  # A bit noisier than the average
 
         self.silence_threshold = calibrated_value
 
         # Play calibration complete audio
+        if show_demo_text:
+            print("Calibration process complete!")
+            print("Calibrated silence threshold set to `{}`".format(self.silence_threshold))
+
         if play_demo_audio:
             calibration2_filepath = os.path.join(constants.static_filepath, 'calibration2.wav')
             playsound.playsound(calibration2_filepath)
-
-            print("Calibration process complete!")
-            print("Calibrated silence threshold set to `{}`".format(self.silence_threshold))
 
         return calibrated_value
 
@@ -139,8 +145,15 @@ class WavAudio(Audio):
         playsound.playsound(filepath)
 
     def record(self, filename: str):
-        # Documentation for sounddevice:
-        # https://python-sounddevice.readthedocs.io/en/latest/usage.html
+        """
+        Records in chunks of self.silence_duration until another silence is reached
+
+        :param filename: Filename to store the recording in at self.filepath
+        :raises NoAudioHeardException: Raised if no audio is heard at all for 20 times the silence_duration
+        :return:
+        """
+
+        stopped_event = threading.Event()
 
         def _record_to_file(stopped, q):
             duration_so_far: float = 0.0
@@ -160,12 +173,17 @@ class WavAudio(Audio):
                 for i in range(0, int(self.sample_rate / self.chunk_size * self.silence_duration)):
                     frame = q.get()
 
-                    self.print_chunk_volume(frame)  # Debug print chunk volume
+                    if self.debug:
+                        self.print_chunk_volume(frame)  # Debug print chunk volume
 
                     frames_to_inspect.append(frame)
 
-                frames += frames_to_inspect
                 is_silent = self._is_silent(frames_to_inspect)
+
+                if not is_silent:
+                    # Add the new frames to the ongoing buffer if it's not silent
+                    frames += frames_to_inspect
+
                 if is_silent:
                     if has_recorded_nonsilence_yet:
                         # Save as WAV file
@@ -184,10 +202,11 @@ class WavAudio(Audio):
                         # close the file
                         wf.close()
 
-                        print("killed")
-                        sys.exit()
+                        stopped_event.set()
+
                     elif duration_so_far > self.silence_duration * 20:
                         # Raised if no audio was ever recorded for 20 times the length of a silence duration
+                        stopped_event.set()
                         raise NoAudioHeardException
                 else:
                     has_recorded_nonsilence_yet = True
@@ -209,7 +228,6 @@ class WavAudio(Audio):
                 except Full:
                     pass  # discard
 
-        stopped_event = threading.Event()
         q = Queue(maxsize=int(round(self.buf_max_size / self.chunk_size)))
 
         listen_t = threading.Thread(target=_listen, args=(stopped_event, q))
@@ -221,6 +239,10 @@ class WavAudio(Audio):
             while True:
                 listen_t.join(0.1)
                 record_t.join(0.1)
+
+                if stopped_event.wait(timeout=0):
+                    break
+
         except KeyboardInterrupt:
             stopped_event.set()
 
