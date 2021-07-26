@@ -128,7 +128,7 @@ class WavAudio(Audio):
             volume = max(stream.read(self.chunk_size))
             frame_volumes.append(volume)
 
-        calibrated_value = int(statistics.median(frame_volumes) * 1.5)  # A bit noisier than the average
+        calibrated_value = int(statistics.median(frame_volumes) * 2.0)  # A bit noisier than the average
 
         self.silence_threshold = calibrated_value
 
@@ -157,10 +157,10 @@ class WavAudio(Audio):
         """
 
         stopped_event = threading.Event()
+        _event = threading.Event()
 
         def _record_to_file(stopped, q):
             duration_so_far: float = 0.0
-            has_recorded_nonsilence_yet: bool = False
             frames: list = []
 
             while True:
@@ -188,7 +188,10 @@ class WavAudio(Audio):
                     frames += frames_to_inspect
 
                 if is_silent:
-                    if has_recorded_nonsilence_yet:
+                    if frames or (not frames and duration_so_far > self.silence_duration * 1):
+                        # If we've recorded at least one non-silent chunk
+                        # or if no audio was ever recorded for 20 times the length of a silence duration
+
                         # Save as WAV file
                         filepath = self._filepath_from_filename(filename)
 
@@ -206,13 +209,6 @@ class WavAudio(Audio):
                         wf.close()
 
                         stopped_event.set()
-
-                    elif duration_so_far > self.silence_duration * 20:
-                        # Raised if no audio was ever recorded for 20 times the length of a silence duration
-                        stopped_event.set()
-                        raise NoAudioHeardException
-                else:
-                    has_recorded_nonsilence_yet = True
 
         def _listen(stopped, q):
             stream = pyaudio.PyAudio().open(

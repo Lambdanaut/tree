@@ -62,12 +62,17 @@ def run(f: "faces.Faces"):
                     i = input(" > ").lower()
                     if i == 'y':
                         print("\nSpeak your message to this person now.")
-                        time.sleep(0.2)  # Shortest of sleeps
+                        time.sleep(0.3)  # Shortest of sleeps
                         message_id: str = str(uuid.uuid4())
                         message_filename = "{}.wav".format(message_id)
-                        wa.record(message_filename)
-                        f.add_message(other_face, message_filename)
-                        print("\nMessage successfully added!")
+                        try:
+                            wa.record(message_filename)
+                        except audio.NoAudioHeardException:
+                            pass
+                            print("\nNo audio message heard")
+                        else:
+                            f.add_message(other_face, message_filename)
+                            print("\nMessage successfully added!")
             else:
                 break
 
