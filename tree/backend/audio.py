@@ -4,6 +4,7 @@ import os
 from queue import Queue, Full
 import statistics
 import sys
+import time
 import threading
 
 import pyaudio
@@ -108,6 +109,8 @@ class WavAudio(Audio):
         if play_demo_audio:
             calibration1_filepath = os.path.join(constants.static_filepath, 'calibration1.wav')
             playsound.playsound(calibration1_filepath)
+        else:
+            time.sleep(0.2)  # Shortest sleep while the microphone warms up.. or something. Trust me it's important
 
         if show_demo_text:
             print(" - Remain silent for 4 seconds")

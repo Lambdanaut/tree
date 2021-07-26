@@ -11,7 +11,7 @@ import tree.backend.faces as faces
 
 def run(f: "faces.Faces"):
     wa = audio.WavAudio()
-    wa.calibrate(show_demo_text=True, play_demo_audio=True)  # Calibrates the silence threshold
+    wa.calibrate(show_demo_text=True, play_demo_audio=False)  # Calibrates the silence threshold
 
     print("Tree initialized")
 
