@@ -20,11 +20,6 @@ import tree.backend.constants as constants
 p = pyaudio.PyAudio()
 
 
-class NoAudioHeardException(Exception):
-    """Raised if we couldn't record any audio"""
-    pass
-
-
 class Audio(abc.ABC):
     @abc.abstractmethod
     def play(self, filepath: str):
@@ -53,7 +48,7 @@ class WavAudio(Audio):
             self,
             max_duration: int = 12,
             silence_threshold: int = 90,  # Anything below this volume is considered silent
-            silence_duration: float = 0.75,  # Number of seconds to look back on to count silence duration
+            silence_duration: float = 1.0,  # Number of seconds to look back on to count silence duration
             filepath: str = None,
             debug: bool = False):
 
@@ -188,7 +183,7 @@ class WavAudio(Audio):
                     frames += frames_to_inspect
 
                 if is_silent:
-                    if frames or (not frames and duration_so_far > self.silence_duration * 1):
+                    if frames or (not frames and duration_so_far > self.silence_duration * 20):
                         # If we've recorded at least one non-silent chunk
                         # or if no audio was ever recorded for 20 times the length of a silence duration
 
