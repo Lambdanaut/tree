@@ -2,16 +2,18 @@ import os
 import time
 import uuid
 
+import voicemsg
 import pyASCIIgenerator
 
 import tree.backend.constants as constants
-import tree.backend.audio as audio
 import tree.backend.faces as faces
 
 
 def run(f: "faces.Faces"):
-    wa = audio.WavAudio()
-    wa.calibrate(show_demo_text=True, play_demo_audio=False)  # Calibrates the silence threshold
+    vm = voicemsg.VoiceMsg(
+        filepath=constants.audio_recordings_filepath,
+        debug=True)
+    vm.calibrate(show_demo_text=True)  # Calibrates the silence threshold
 
     print("Tree initialized")
 
@@ -42,7 +44,7 @@ def run(f: "faces.Faces"):
                 for _ in range(len(face.messages)):
                     message = face.consume_message()
                     print(" * \"{}\"".format(message))
-                    wa.play(message)
+                    vm.play(message)
         else:
             print(" You have `0` new messages.")
 
@@ -65,7 +67,7 @@ def run(f: "faces.Faces"):
                         time.sleep(0.3)  # Shortest of sleeps
                         message_id: str = str(uuid.uuid4())
                         message_filename = "{}.wav".format(message_id)
-                        wa.record(message_filename)
+                        vm.record(message_filename)
                         f.add_message(other_face, message_filename)
                         print("\nMessage successfully added!")
             else:

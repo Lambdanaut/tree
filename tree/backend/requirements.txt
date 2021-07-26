@@ -5,5 +5,5 @@ Pillow==7.0.0
 playsound==1.3.0
 pyASCIIgenerator==1.0.0
 PyAudio==0.2.11
-sounddevice==0.4.1
 wave==0.0.2
+git+https://github.com/Lambdanaut/voicemsg.git
