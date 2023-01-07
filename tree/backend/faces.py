@@ -36,6 +36,7 @@ def cam_capture() -> (str, str):
     :return: Returns an id used to create the file and the filepath to the saved image.
     """
     vidcap = cv2.VideoCapture(0)
+    import time; time.sleep(0.3)  # Wait for camera to warm up
     success, image = vidcap.read()
 
     _id = str(uuid.uuid4())
